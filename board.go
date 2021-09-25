@@ -166,7 +166,7 @@ func checkForCheck(b Board, h MoveSequence, p int) bool {
 	for _, file := range FILES {
 		for _, rank := range RANKS {
 			if opposing(b[file][rank]) {
-				moves := generateLegalMoves(b, h, file, rank)
+				moves := generateLegalMoves(b, h, file, rank, p, true)
 				for _, move := range moves {
 					if (move.DR == kingRank) && (move.DF == kingFile) {
 						return true
@@ -178,662 +178,665 @@ func checkForCheck(b Board, h MoveSequence, p int) bool {
 	return false
 }
 
-func generateLegalMoves(b Board, h MoveSequence, file int, rank int) MoveSequence {
+func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, fromCheck bool) MoveSequence {
 	moves := make(MoveSequence, 0)
-	switch b[file][rank] {
-	case WHITE_PAWN:
-		// Cases if not in check: 
-		// (1) FORWARD 1:  Legal iff the square in front of the pawn is empty and the pawn isn't pinned.
-		// (2) FORWARD 2:  Legal iff the pawn is on the 2nd rank, the first two squares in front of the pawn are empty, and the pawn isn't pinned.
-		// (3) CAPTURE:    Legal iff there is an opposing piece either up and to the left or up and to the right of the pawn, and the pawn isn't pinned.
-		// (4) EN PASSANT: Legal iff an opposing pawn moved two squares forward to a square directly adjacent to the source pawn in the previous 
-		//                 move, the square behind the opposing pawn is empty (vacuous), and the pawn isn't pinned.
-		// (5a) PROMOTION: Legal iff the pawn is on the 7th rank and FORWARD 1 is legal
-		// (5b) PROMOTION: Legal iff the pawn is on the 7th rank and CAPTURE is legal.
-
-		// (1) FORWARD 1 / (5a) PROMOTION:
-		if (rank + 1 <= 8) && (b[file][rank + 1] == EMPTY_SQUARE) {
-			if rank == 7 {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file, DR: rank + 1, P: WHITE_KNIGHT})
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file, DR: rank + 1, P: WHITE_BISHOP})
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file, DR: rank + 1, P: WHITE_ROOK})
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file, DR: rank + 1, P: WHITE_QUEEN})
-			} else {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file, DR: rank + 1, P: WHITE_PAWN})
-			}
-		}
-
-		// (2) FORWARD 2:
-		if (rank == 2) && (b[file][rank + 1] == EMPTY_SQUARE) && (b[file][rank + 2] == EMPTY_SQUARE) {
-			moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file, DR: rank + 2, P: WHITE_PAWN})
-		}
-
-		// (3) CAPTURE / (5b) PROMOTION:
-		if (rank + 1 <= 8) && (file + 1 <= 'H') && (b[file + 1][rank + 1] > 128) {
-			if rank == 7 {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank + 1, P: WHITE_KNIGHT})
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank + 1, P: WHITE_BISHOP})
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank + 1, P: WHITE_ROOK})
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank + 1, P: WHITE_QUEEN})
-			} else {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank + 1, P: WHITE_PAWN})
-			}
-		}
-		if (rank + 1 <= 8) && (file - 1 >= 'A') && (b[file - 1][rank + 1] > 128) {
-			if rank == 7 {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank + 1, P: WHITE_KNIGHT})
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank + 1, P: WHITE_BISHOP})
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank + 1, P: WHITE_ROOK})
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank + 1, P: WHITE_QUEEN})
-			} else {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank + 1, P: WHITE_PAWN})
-			}
-		}
-
-		// (4) EN PASSANT:
-		if (rank == 5) && (file + 1 <= 'H') && (len(h) > 0) && (h[len(h) - 1] == Move{PL: 1, SF: file + 1, SR: 7, DF: file + 1, DR: 5, P: BLACK_PAWN}) {
-			moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank + 1, P: WHITE_PAWN})
-		}
-		if (rank == 5) && (file - 1 >= 'A') && (len(h) > 0) && (h[len(h) - 1] == Move{PL: 1, SF: file - 1, SR: 7, DF: file - 1, DR: 5, P: BLACK_PAWN}) {
-			moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank + 1, P: WHITE_PAWN})
-		}
-	case WHITE_KNIGHT:
-		// Cases if not in check:
-		// (1) JUMP:       Legal iff the target square is a knight's move away, is empty or has an opposing piece in it, and the knight isn't pinned.
-		if (file + 1 <= 'H') && (rank + 2 <= 8) && ((b[file + 1][rank + 2] == EMPTY_SQUARE) || (b[file + 1][rank + 2] > 128)) {
-			moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank + 2, P: WHITE_KNIGHT})
-		}
-		if (file + 2 <= 'H') && (rank + 1 <= 8) && ((b[file + 2][rank + 1] == EMPTY_SQUARE) || (b[file + 2][rank + 1] > 128)) {
-			moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 2, DR: rank + 1, P: WHITE_KNIGHT})
-		}
-		if (file + 2 <= 'H') && (rank - 1 >= 1) && ((b[file + 2][rank - 1] == EMPTY_SQUARE) || (b[file + 2][rank - 1] > 128)) {
-			moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 2, DR: rank - 1, P: WHITE_KNIGHT})
-		}
-		if (file + 1 <= 'H') && (rank - 2 >= 1) && ((b[file + 1][rank - 2] == EMPTY_SQUARE) || (b[file + 1][rank - 2] > 128)) {
-			moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank - 2, P: WHITE_KNIGHT})
-		}
-		if (file - 1 >= 'A') && (rank - 2 >= 1) && ((b[file - 1][rank - 2] == EMPTY_SQUARE) || (b[file - 1][rank - 2] > 128)) {
-			moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank - 2, P: WHITE_KNIGHT})
-		}
-		if (file - 2 >= 'A') && (rank - 1 >= 1) && ((b[file - 2][rank - 1] == EMPTY_SQUARE) || (b[file - 2][rank - 1] > 128)) {
-			moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 2, DR: rank - 1, P: WHITE_KNIGHT})
-		}
-		if (file - 2 >= 'A') && (rank + 1 <= 8) && ((b[file - 2][rank + 1] == EMPTY_SQUARE) || (b[file - 2][rank + 1] > 128)) {
-			moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 2, DR: rank + 1, P: WHITE_KNIGHT})
-		}
-		if (file - 1 >= 'A') && (rank + 2 <= 8) && ((b[file - 1][rank + 2] == EMPTY_SQUARE) || (b[file - 1][rank + 2] > 128)) {
-			moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank + 2, P: WHITE_KNIGHT})
-		}
-	case WHITE_BISHOP:
-		// Cases if not in check:
-		// (1) MOVE:       Legal iff the target square is on the same diagonal as the bishop, every square diagonally between the bishop and the target square 
-		//                 is empty, the target square is empty or has an opposing piece, and the bishop isn't pinned.
-		targetRank := rank + 1
-		targetFile := file + 1
-		for (targetRank <= 8) && (targetFile <= 'H') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank += 1
-			targetFile += 1
-		}
-		targetRank = rank - 1
-		targetFile = file + 1
-		for (targetRank >= 0) && (targetFile <= 'H') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank -= 1
-			targetFile += 1
-		}
-		targetRank = rank - 1
-		targetFile = file - 1
-		for (targetRank >= 0) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank -= 1
-			targetFile -= 1
-		}
-		targetRank = rank + 1
-		targetFile = file - 1
-		for (targetRank <= 8) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank += 1
-			targetFile -= 1
-		}
-	case WHITE_ROOK:
-		// Cases if not in check:
-		// (1) MOVE:       Legal iff the target square is on either the same rank or the same file as the rook, every square between the rook and the target 
-		//                 square is empty, the target square is empty or has an opposing piece, and the rook isn't pinned.
-		targetRank := rank
-		targetFile := file + 1
-		for (targetRank <= 8) && (targetFile <= 'H') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetFile += 1
-		}
-		targetRank = rank
-		targetFile = file - 1
-		for (targetRank >= 0) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetFile -= 1
-		}
-		targetRank = rank - 1
-		targetFile = file
-		for (targetRank >= 0) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank -= 1
-		}
-		targetRank = rank + 1
-		targetFile = file
-		for (targetRank <= 8) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank += 1
-		}
-	case WHITE_QUEEN:
-		// Cases if not in check:
-		// (1) MOVE:       Legal iff the target square is on either the same rank, the same file, or the same diagonal as the queen, every square between the
-		//                 the queen and the target square is empty, the target square is empty or has an opposing piece, and the queen isn't pinned.
-		targetRank := rank + 1
-		targetFile := file + 1
-		for (targetRank <= 8) && (targetFile <= 'H') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank += 1
-			targetFile += 1
-		}
-		targetRank = rank - 1
-		targetFile = file + 1
-		for (targetRank >= 0) && (targetFile <= 'H') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank -= 1
-			targetFile += 1
-		}
-		targetRank = rank - 1
-		targetFile = file - 1
-		for (targetRank >= 0) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank -= 1
-			targetFile -= 1
-		}
-		targetRank = rank + 1
-		targetFile = file - 1
-		for (targetRank <= 8) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank += 1
-			targetFile -= 1
-		}
-		targetRank = rank
-		targetFile = file + 1
-		for (targetRank <= 8) && (targetFile <= 'H') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetFile += 1
-		}
-		targetRank = rank
-		targetFile = file - 1
-		for (targetRank >= 0) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetFile -= 1
-		}
-		targetRank = rank - 1
-		targetFile = file
-		for (targetRank >= 0) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank -= 1
-		}
-		targetRank = rank + 1
-		targetFile = file
-		for (targetRank <= 8) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank += 1
-		}
-	// case WHITE_KING:
-	case BLACK_PAWN:
-		// Cases if not in check: 
-		// (1) FORWARD 1:  Legal iff the square in front of the pawn is empty and the pawn isn't pinned.
-		// (2) FORWARD 2:  Legal iff the pawn is on the 2nd rank, the first two squares in front of the pawn are empty, and the pawn isn't pinned.
-		// (3) CAPTURE:    Legal iff there is an opposing piece either up and to the left or up and to the right of the pawn, and the pawn isn't pinned.
-		// (4) EN PASSANT: Legal iff an opposing pawn moved two squares forward to a square directly adjacent to the source pawn in the previous 
-		//                 move, the square behind the opposing pawn is empty (vacuous), and the pawn isn't pinned.
-		// (5a) PROMOTION: Legal iff the pawn is on the 7th rank and FORWARD 1 is legal
-		// (5b) PROMOTION: Legal iff the pawn is on the 7th rank and CAPTURE is legal.
-
-		// (1) FORWARD 1 / (5a) PROMOTION:
-		if (rank - 1 >= 1) && (b[file][rank - 1] == EMPTY_SQUARE) {
-			if rank == 2 {
-				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file, DR: rank - 1, P: BLACK_KNIGHT})
-				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file, DR: rank - 1, P: BLACK_BISHOP})
-				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file, DR: rank - 1, P: BLACK_ROOK})
-				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file, DR: rank - 1, P: BLACK_QUEEN})
-			} else {
-				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file, DR: rank - 1, P: BLACK_PAWN})
-			}
-		}
-
-		// (2) FORWARD 2:
-		if (rank == 7) && (b[file][rank - 1] == EMPTY_SQUARE) && (b[file][rank - 2] == EMPTY_SQUARE) {
-			moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file, DR: rank - 2, P: BLACK_PAWN})
-		}
-
-		// (3) CAPTURE / (5b) PROMOTION:
-		if (rank - 1 >= 1) && (file + 1 <= 'H') && (isWhite(b[file + 1][rank - 1])) {
-			if rank == 2 {
-				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank - 1, P: BLACK_KNIGHT})
-				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank - 1, P: BLACK_BISHOP})
-				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank - 1, P: BLACK_ROOK})
-				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank - 1, P: BLACK_QUEEN})
-			} else {
-				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank - 1, P: BLACK_PAWN})
-			}
-		}
-		if (rank - 1 >= 1) && (file - 1 >= 'A') && (isWhite(b[file - 1][rank + 1])) {
-			if rank == 7 {
-				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 1, P: BLACK_KNIGHT})
-				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 1, P: BLACK_BISHOP})
-				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 1, P: BLACK_ROOK})
-				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 1, P: BLACK_QUEEN})
-			} else {
-				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 1, P: BLACK_PAWN})
-			}
-		}
-
-		// (4) EN PASSANT:
-		if (rank == 4) && (file + 1 <= 'H') && (len(h) > 0) && (h[len(h) - 1] == Move{PL: 0, SF: file + 1, SR: 2, DF: file + 1, DR: 4, P: WHITE_PAWN}) {
-			moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank - 1, P: BLACK_PAWN})
-		}
-		if (rank == 4) && (file - 1 >= 'A') && (len(h) > 0) && (h[len(h) - 1] == Move{PL: 0, SF: file - 1, SR: 2, DF: file - 1, DR: 4, P: WHITE_PAWN}) {
-			moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 1, P: BLACK_PAWN})
-		}
-	case BLACK_KNIGHT:
-		// Cases if not in check:
-		// (1) JUMP:       Legal iff the target square is a knight's move away, is empty or has an opposing piece in it, and the knight isn't pinned.
-		if (file + 1 <= 'H') && (rank + 2 <= 8) && ((b[file + 1][rank + 2] == EMPTY_SQUARE) || (b[file + 1][rank + 2] < 128)) {
-			moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank + 2, P: BLACK_KNIGHT})
-		}
-		if (file + 2 <= 'H') && (rank + 1 <= 8) && ((b[file + 2][rank + 1] == EMPTY_SQUARE) || (b[file + 2][rank + 1] < 128)) {
-			moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 2, DR: rank + 1, P: BLACK_KNIGHT})
-		}
-		if (file + 2 <= 'H') && (rank - 1 >= 1) && ((b[file + 2][rank - 1] == EMPTY_SQUARE) || (b[file + 2][rank - 1] < 128)) {
-			moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 2, DR: rank - 1, P: BLACK_KNIGHT})
-		}
-		if (file + 1 <= 'H') && (rank - 2 >= 1) && ((b[file + 1][rank - 2] == EMPTY_SQUARE) || (b[file + 1][rank - 2] < 128)) {
-			moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank - 2, P: BLACK_KNIGHT})
-		}
-		if (file - 1 >= 'A') && (rank - 2 >= 1) && ((b[file - 1][rank - 2] == EMPTY_SQUARE) || (b[file - 1][rank - 2] < 128)) {
-			moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 2, P: BLACK_KNIGHT})
-		}
-		if (file - 2 >= 'A') && (rank - 1 >= 1) && ((b[file - 2][rank - 1] == EMPTY_SQUARE) || (b[file - 2][rank - 1] < 128)) {
-			moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 2, DR: rank - 1, P: BLACK_KNIGHT})
-		}
-		if (file - 2 >= 'A') && (rank + 1 <= 8) && ((b[file - 2][rank + 1] == EMPTY_SQUARE) || (b[file - 2][rank + 1] < 128)) {
-			moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 2, DR: rank + 1, P: BLACK_KNIGHT})
-		}
-		if (file - 1 >= 'A') && (rank + 2 <= 8) && ((b[file - 1][rank + 2] == EMPTY_SQUARE) || (b[file - 1][rank + 2] < 128)) {
-			moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank + 2, P: BLACK_KNIGHT})
-		}
-	case BLACK_BISHOP:
-		// Cases if not in check:
-		// (1) MOVE:       Legal iff the target square is on the same diagonal as the bishop, every square diagonally between the bishop and the target square 
-		//                 is empty, the target square is empty or has an opposing piece, and the bishop isn't pinned.
-		targetRank := rank + 1
-		targetFile := file + 1
-		for (targetRank <= 8) && (targetFile <= 'H') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank += 1
-			targetFile += 1
-		}
-		targetRank = rank - 1
-		targetFile = file + 1
-		for (targetRank >= 0) && (targetFile <= 'H') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank -= 1
-			targetFile += 1
-		}
-		targetRank = rank - 1
-		targetFile = file - 1
-		for (targetRank >= 0) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank -= 1
-			targetFile -= 1
-		}
-		targetRank = rank + 1
-		targetFile = file - 1
-		for (targetRank <= 8) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank += 1
-			targetFile -= 1
-		}
-	case BLACK_ROOK:
-		// Cases if not in check:
-		// (1) MOVE:       Legal iff the target square is on either the same rank or the same file as the rook, every square between the rook and the target 
-		//                 square is empty, the target square is empty or has an opposing piece, and the rook isn't pinned.
-		targetRank := rank
-		targetFile := file + 1
-		for (targetRank <= 8) && (targetFile <= 'H') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetFile += 1
-		}
-		targetRank = rank
-		targetFile = file - 1
-		for (targetRank >= 0) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetFile -= 1
-		}
-		targetRank = rank - 1
-		targetFile = file
-		for (targetRank >= 0) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank -= 1
-		}
-		targetRank = rank + 1
-		targetFile = file
-		for (targetRank <= 8) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank += 1
-		}
-	case BLACK_QUEEN:
-		// Cases if not in check:
-		// (1) MOVE:       Legal iff the target square is on either the same rank, the same file, or the same diagonal as the queen, every square between the
-		//                 the queen and the target square is empty, the target square is empty or has an opposing piece, and the queen isn't pinned.
-		targetRank := rank + 1
-		targetFile := file + 1
-		for (targetRank <= 8) && (targetFile <= 'H') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank += 1
-			targetFile += 1
-		}
-		targetRank = rank - 1
-		targetFile = file + 1
-		for (targetRank >= 0) && (targetFile <= 'H') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank -= 1
-			targetFile += 1
-		}
-		targetRank = rank - 1
-		targetFile = file - 1
-		for (targetRank >= 0) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank -= 1
-			targetFile -= 1
-		}
-		targetRank = rank + 1
-		targetFile = file - 1
-		for (targetRank <= 8) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank += 1
-			targetFile -= 1
-		}
-		targetRank = rank
-		targetFile = file + 1
-		for (targetRank <= 8) && (targetFile <= 'H') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetFile += 1
-		}
-		targetRank = rank
-		targetFile = file - 1
-		for (targetRank >= 0) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetFile -= 1
-		}
-		targetRank = rank - 1
-		targetFile = file
-		for (targetRank >= 0) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank -= 1
-		}
-		targetRank = rank + 1
-		targetFile = file
-		for (targetRank <= 8) && (targetFile >= 'A') {
-			if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
-			}
-			if b[targetFile][targetRank] != EMPTY_SQUARE {
-				break
-			}
-			targetRank += 1
-		}
-	// case BLACK_KING:
-	}
-	return moves
-}
-
-func checkLegalMove(b Board, h MoveSequence, m Move) (bool, error) {
-	sourcePiece := b[m.SF][m.SR]
-	targetSquare := b[m.DF][m.DR]
-	inCheck := checkForCheck(b, h, 0)
-	if inCheck {
-		// TODO
-	} else {
-		if sourcePiece == EMPTY_SQUARE {
-			return false, nil
-		} else if sourcePiece == WHITE_PAWN {
+	if p == 0 {
+		switch b[file][rank] {
+		case WHITE_PAWN:
 			// Cases if not in check: 
 			// (1) FORWARD 1:  Legal iff the square in front of the pawn is empty and the pawn isn't pinned.
 			// (2) FORWARD 2:  Legal iff the pawn is on the 2nd rank, the first two squares in front of the pawn are empty, and the pawn isn't pinned.
 			// (3) CAPTURE:    Legal iff there is an opposing piece either up and to the left or up and to the right of the pawn, and the pawn isn't pinned.
 			// (4) EN PASSANT: Legal iff an opposing pawn moved two squares forward to a square directly adjacent to the source pawn in the previous 
 			//                 move, the square behind the opposing pawn is empty (vacuous), and the pawn isn't pinned.
-			// (5) PROMOTION:  Legal iff the pawn is on the 7th rank, and either FORWARD 1 is legal or CAPTURE is legal.
+			// (5a) PROMOTION: Legal iff the pawn is on the 7th rank and FORWARD 1 is legal
+			// (5b) PROMOTION: Legal iff the pawn is on the 7th rank and CAPTURE is legal.
 
-			// Check if pinned: TODO
-
-			// (1) FORWARD 1:
-			if (m.SF == m.DF) && (m.SR + 1 == m.DR) {
-				return targetSquare == EMPTY_SQUARE, nil
+			// (1) FORWARD 1 / (5a) PROMOTION:
+			if (rank + 1 <= 8) && (b[file][rank + 1] == EMPTY_SQUARE) {
+				if rank == 7 {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file, DR: rank + 1, P: WHITE_KNIGHT})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file, DR: rank + 1, P: WHITE_BISHOP})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file, DR: rank + 1, P: WHITE_ROOK})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file, DR: rank + 1, P: WHITE_QUEEN})
+				} else {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file, DR: rank + 1, P: WHITE_PAWN})
+				}
 			}
 
 			// (2) FORWARD 2:
-			if (m.SF == m.DF) && (m.SR == 2) && (m.DR == 4) {
-				return (targetSquare == EMPTY_SQUARE) && (b[m.SF][3] == EMPTY_SQUARE), nil
+			if (rank == 2) && (b[file][rank + 1] == EMPTY_SQUARE) && (b[file][rank + 2] == EMPTY_SQUARE) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file, DR: rank + 2, P: WHITE_PAWN})
 			}
 
-			// (3) CAPTURE:
-			if ((m.SF == m.DF + 1) || (m.SF == m.DF - 1)) && (m.SR + 1 == m.DR) {
-				return targetSquare > 128, nil // Checks if leading bit == 1, signifying a black piece.
+			// (3) CAPTURE / (5b) PROMOTION:
+			if (rank + 1 <= 8) && (file + 1 <= 'H') && (b[file + 1][rank + 1] > 128) {
+				if rank == 7 {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank + 1, P: WHITE_KNIGHT})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank + 1, P: WHITE_BISHOP})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank + 1, P: WHITE_ROOK})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank + 1, P: WHITE_QUEEN})
+				} else {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank + 1, P: WHITE_PAWN})
+				}
+			}
+			if (rank + 1 <= 8) && (file - 1 >= 'A') && (b[file - 1][rank + 1] > 128) {
+				if rank == 7 {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank + 1, P: WHITE_KNIGHT})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank + 1, P: WHITE_BISHOP})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank + 1, P: WHITE_ROOK})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank + 1, P: WHITE_QUEEN})
+				} else {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank + 1, P: WHITE_PAWN})
+				}
 			}
 
 			// (4) EN PASSANT:
-			// pm := h[len(h) - 1]
-
-		} else if sourcePiece == BLACK_PAWN {
+			if (rank == 5) && (file + 1 <= 'H') && (len(h) > 0) && (h[len(h) - 1] == Move{PL: 1, SF: file + 1, SR: 7, DF: file + 1, DR: 5, P: BLACK_PAWN}) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank + 1, P: WHITE_PAWN})
+			}
+			if (rank == 5) && (file - 1 >= 'A') && (len(h) > 0) && (h[len(h) - 1] == Move{PL: 1, SF: file - 1, SR: 7, DF: file - 1, DR: 5, P: BLACK_PAWN}) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank + 1, P: WHITE_PAWN})
+			}
+		case WHITE_KNIGHT:
+			// Cases if not in check:
+			// (1) JUMP:       Legal iff the target square is a knight's move away, is empty or has an opposing piece in it, and the knight isn't pinned.
+			if (file + 1 <= 'H') && (rank + 2 <= 8) && ((b[file + 1][rank + 2] == EMPTY_SQUARE) || (b[file + 1][rank + 2] > 128)) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank + 2, P: WHITE_KNIGHT})
+			}
+			if (file + 2 <= 'H') && (rank + 1 <= 8) && ((b[file + 2][rank + 1] == EMPTY_SQUARE) || (b[file + 2][rank + 1] > 128)) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 2, DR: rank + 1, P: WHITE_KNIGHT})
+			}
+			if (file + 2 <= 'H') && (rank - 1 >= 1) && ((b[file + 2][rank - 1] == EMPTY_SQUARE) || (b[file + 2][rank - 1] > 128)) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 2, DR: rank - 1, P: WHITE_KNIGHT})
+			}
+			if (file + 1 <= 'H') && (rank - 2 >= 1) && ((b[file + 1][rank - 2] == EMPTY_SQUARE) || (b[file + 1][rank - 2] > 128)) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file + 1, DR: rank - 2, P: WHITE_KNIGHT})
+			}
+			if (file - 1 >= 'A') && (rank - 2 >= 1) && ((b[file - 1][rank - 2] == EMPTY_SQUARE) || (b[file - 1][rank - 2] > 128)) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank - 2, P: WHITE_KNIGHT})
+			}
+			if (file - 2 >= 'A') && (rank - 1 >= 1) && ((b[file - 2][rank - 1] == EMPTY_SQUARE) || (b[file - 2][rank - 1] > 128)) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 2, DR: rank - 1, P: WHITE_KNIGHT})
+			}
+			if (file - 2 >= 'A') && (rank + 1 <= 8) && ((b[file - 2][rank + 1] == EMPTY_SQUARE) || (b[file - 2][rank + 1] > 128)) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 2, DR: rank + 1, P: WHITE_KNIGHT})
+			}
+			if (file - 1 >= 'A') && (rank + 2 <= 8) && ((b[file - 1][rank + 2] == EMPTY_SQUARE) || (b[file - 1][rank + 2] > 128)) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: file - 1, DR: rank + 2, P: WHITE_KNIGHT})
+			}
+		case WHITE_BISHOP:
+			// Cases if not in check:
+			// (1) MOVE:       Legal iff the target square is on the same diagonal as the bishop, every square diagonally between the bishop and the target square 
+			//                 is empty, the target square is empty or has an opposing piece, and the bishop isn't pinned.
+			targetRank := rank + 1
+			targetFile := file + 1
+			for (targetRank <= 8) && (targetFile <= 'H') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank += 1
+				targetFile += 1
+			}
+			targetRank = rank - 1
+			targetFile = file + 1
+			for (targetRank >= 0) && (targetFile <= 'H') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank -= 1
+				targetFile += 1
+			}
+			targetRank = rank - 1
+			targetFile = file - 1
+			for (targetRank >= 0) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank -= 1
+				targetFile -= 1
+			}
+			targetRank = rank + 1
+			targetFile = file - 1
+			for (targetRank <= 8) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank += 1
+				targetFile -= 1
+			}
+		case WHITE_ROOK:
+			// Cases if not in check:
+			// (1) MOVE:       Legal iff the target square is on either the same rank or the same file as the rook, every square between the rook and the target 
+			//                 square is empty, the target square is empty or has an opposing piece, and the rook isn't pinned.
+			targetRank := rank
+			targetFile := file + 1
+			for (targetRank <= 8) && (targetFile <= 'H') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetFile += 1
+			}
+			targetRank = rank
+			targetFile = file - 1
+			for (targetRank >= 0) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetFile -= 1
+			}
+			targetRank = rank - 1
+			targetFile = file
+			for (targetRank >= 0) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank -= 1
+			}
+			targetRank = rank + 1
+			targetFile = file
+			for (targetRank <= 8) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank += 1
+			}
+		case WHITE_QUEEN:
+			// Cases if not in check:
+			// (1) MOVE:       Legal iff the target square is on either the same rank, the same file, or the same diagonal as the queen, every square between the
+			//                 the queen and the target square is empty, the target square is empty or has an opposing piece, and the queen isn't pinned.
+			targetRank := rank + 1
+			targetFile := file + 1
+			for (targetRank <= 8) && (targetFile <= 'H') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank += 1
+				targetFile += 1
+			}
+			targetRank = rank - 1
+			targetFile = file + 1
+			for (targetRank >= 0) && (targetFile <= 'H') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank -= 1
+				targetFile += 1
+			}
+			targetRank = rank - 1
+			targetFile = file - 1
+			for (targetRank >= 0) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank -= 1
+				targetFile -= 1
+			}
+			targetRank = rank + 1
+			targetFile = file - 1
+			for (targetRank <= 8) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank += 1
+				targetFile -= 1
+			}
+			targetRank = rank
+			targetFile = file + 1
+			for (targetRank <= 8) && (targetFile <= 'H') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetFile += 1
+			}
+			targetRank = rank
+			targetFile = file - 1
+			for (targetRank >= 0) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetFile -= 1
+			}
+			targetRank = rank - 1
+			targetFile = file
+			for (targetRank >= 0) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank -= 1
+			}
+			targetRank = rank + 1
+			targetFile = file
+			for (targetRank <= 8) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank += 1
+			}
+		case WHITE_KING:
+			targetRank := rank + 1
+			targetFile := file + 1
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
+			}
+			targetRank = rank + 1
+			targetFile = file
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
+			}
+			targetRank = rank + 1 
+			targetFile = file - 1
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
+			}
+			targetRank = rank
+			targetFile = file + 1
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
+			}
+			targetRank = rank
+			targetFile = file - 1
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
+			}
+			targetRank = rank - 1
+			targetFile = file + 1
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
+			}
+			targetRank = rank - 1
+			targetFile = file
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
+			}
+			targetRank = rank - 1 
+			targetFile = file - 1
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
+			}
+		}
+	} else {
+		switch b[file][rank] {
+		case BLACK_PAWN:
 			// Cases if not in check: 
 			// (1) FORWARD 1:  Legal iff the square in front of the pawn is empty and the pawn isn't pinned.
-			// (2) FORWARD 2:  Legal iff the pawn is on the 7th rank, the first two squares in front of the pawn are empty, and the pawn isn't pinned.
+			// (2) FORWARD 2:  Legal iff the pawn is on the 2nd rank, the first two squares in front of the pawn are empty, and the pawn isn't pinned.
 			// (3) CAPTURE:    Legal iff there is an opposing piece either up and to the left or up and to the right of the pawn, and the pawn isn't pinned.
 			// (4) EN PASSANT: Legal iff an opposing pawn moved two squares forward to a square directly adjacent to the source pawn in the previous 
 			//                 move, the square behind the opposing pawn is empty (vacuous), and the pawn isn't pinned.
-			// (5) PROMOTION:  Legal iff the pawn is on the 2nd rank, and either FORWARD 1 is legal or CAPTURE is legal.
-		} else if sourcePiece == WHITE_KNIGHT {
+			// (5a) PROMOTION: Legal iff the pawn is on the 7th rank and FORWARD 1 is legal
+			// (5b) PROMOTION: Legal iff the pawn is on the 7th rank and CAPTURE is legal.
+
+			// (1) FORWARD 1 / (5a) PROMOTION:
+			if (rank - 1 >= 1) && (b[file][rank - 1] == EMPTY_SQUARE) {
+				if rank == 2 {
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file, DR: rank - 1, P: BLACK_KNIGHT})
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file, DR: rank - 1, P: BLACK_BISHOP})
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file, DR: rank - 1, P: BLACK_ROOK})
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file, DR: rank - 1, P: BLACK_QUEEN})
+				} else {
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file, DR: rank - 1, P: BLACK_PAWN})
+				}
+			}
+
+			// (2) FORWARD 2:
+			if (rank == 7) && (b[file][rank - 1] == EMPTY_SQUARE) && (b[file][rank - 2] == EMPTY_SQUARE) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file, DR: rank - 2, P: BLACK_PAWN})
+			}
+
+			// (3) CAPTURE / (5b) PROMOTION:
+			if (rank - 1 >= 1) && (file + 1 <= 'H') && (isWhite(b[file + 1][rank - 1])) {
+				if rank == 2 {
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank - 1, P: BLACK_KNIGHT})
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank - 1, P: BLACK_BISHOP})
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank - 1, P: BLACK_ROOK})
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank - 1, P: BLACK_QUEEN})
+				} else {
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank - 1, P: BLACK_PAWN})
+				}
+			}
+			if (rank - 1 >= 1) && (file - 1 >= 'A') && (isWhite(b[file - 1][rank + 1])) {
+				if rank == 7 {
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 1, P: BLACK_KNIGHT})
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 1, P: BLACK_BISHOP})
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 1, P: BLACK_ROOK})
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 1, P: BLACK_QUEEN})
+				} else {
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 1, P: BLACK_PAWN})
+				}
+			}
+
+			// (4) EN PASSANT:
+			if (rank == 4) && (file + 1 <= 'H') && (len(h) > 0) && (h[len(h) - 1] == Move{PL: 0, SF: file + 1, SR: 2, DF: file + 1, DR: 4, P: WHITE_PAWN}) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank - 1, P: BLACK_PAWN})
+			}
+			if (rank == 4) && (file - 1 >= 'A') && (len(h) > 0) && (h[len(h) - 1] == Move{PL: 0, SF: file - 1, SR: 2, DF: file - 1, DR: 4, P: WHITE_PAWN}) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 1, P: BLACK_PAWN})
+			}
+		case BLACK_KNIGHT:
 			// Cases if not in check:
 			// (1) JUMP:       Legal iff the target square is a knight's move away, is empty or has an opposing piece in it, and the knight isn't pinned.
-		} else if sourcePiece == BLACK_KNIGHT {
-			// Cases if not in check:
-			// (1) JUMP:       Legal iff the target square is a knight's move away, is empty or has an opposing piece in it, and the knight isn't pinned.
-		} else if sourcePiece == WHITE_BISHOP {
+			if (file + 1 <= 'H') && (rank + 2 <= 8) && ((b[file + 1][rank + 2] == EMPTY_SQUARE) || (b[file + 1][rank + 2] < 128)) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank + 2, P: BLACK_KNIGHT})
+			}
+			if (file + 2 <= 'H') && (rank + 1 <= 8) && ((b[file + 2][rank + 1] == EMPTY_SQUARE) || (b[file + 2][rank + 1] < 128)) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 2, DR: rank + 1, P: BLACK_KNIGHT})
+			}
+			if (file + 2 <= 'H') && (rank - 1 >= 1) && ((b[file + 2][rank - 1] == EMPTY_SQUARE) || (b[file + 2][rank - 1] < 128)) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 2, DR: rank - 1, P: BLACK_KNIGHT})
+			}
+			if (file + 1 <= 'H') && (rank - 2 >= 1) && ((b[file + 1][rank - 2] == EMPTY_SQUARE) || (b[file + 1][rank - 2] < 128)) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank - 2, P: BLACK_KNIGHT})
+			}
+			if (file - 1 >= 'A') && (rank - 2 >= 1) && ((b[file - 1][rank - 2] == EMPTY_SQUARE) || (b[file - 1][rank - 2] < 128)) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 2, P: BLACK_KNIGHT})
+			}
+			if (file - 2 >= 'A') && (rank - 1 >= 1) && ((b[file - 2][rank - 1] == EMPTY_SQUARE) || (b[file - 2][rank - 1] < 128)) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 2, DR: rank - 1, P: BLACK_KNIGHT})
+			}
+			if (file - 2 >= 'A') && (rank + 1 <= 8) && ((b[file - 2][rank + 1] == EMPTY_SQUARE) || (b[file - 2][rank + 1] < 128)) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 2, DR: rank + 1, P: BLACK_KNIGHT})
+			}
+			if (file - 1 >= 'A') && (rank + 2 <= 8) && ((b[file - 1][rank + 2] == EMPTY_SQUARE) || (b[file - 1][rank + 2] < 128)) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank + 2, P: BLACK_KNIGHT})
+			}
+		case BLACK_BISHOP:
 			// Cases if not in check:
 			// (1) MOVE:       Legal iff the target square is on the same diagonal as the bishop, every square diagonally between the bishop and the target square 
 			//                 is empty, the target square is empty or has an opposing piece, and the bishop isn't pinned.
-		} else if sourcePiece == BLACK_BISHOP {
-			// Cases if not in check:
-			// (1) MOVE:       Legal iff the target square is on the same diagonal as the bishop, every square diagonally between the bishop and the target square 
-			//                 is empty, the target square is empty or has an opposing piece, and the bishop isn't pinned.
-		} else if sourcePiece == WHITE_ROOK {
+			targetRank := rank + 1
+			targetFile := file + 1
+			for (targetRank <= 8) && (targetFile <= 'H') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank += 1
+				targetFile += 1
+			}
+			targetRank = rank - 1
+			targetFile = file + 1
+			for (targetRank >= 0) && (targetFile <= 'H') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank -= 1
+				targetFile += 1
+			}
+			targetRank = rank - 1
+			targetFile = file - 1
+			for (targetRank >= 0) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank -= 1
+				targetFile -= 1
+			}
+			targetRank = rank + 1
+			targetFile = file - 1
+			for (targetRank <= 8) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank += 1
+				targetFile -= 1
+			}
+		case BLACK_ROOK:
 			// Cases if not in check:
 			// (1) MOVE:       Legal iff the target square is on either the same rank or the same file as the rook, every square between the rook and the target 
 			//                 square is empty, the target square is empty or has an opposing piece, and the rook isn't pinned.
-		} else if sourcePiece == BLACK_ROOK {
-			// Cases if not in check:
-			// (1) MOVE:       Legal iff the target square is on either the same rank or the same file as the rook, every square between the rook and the target 
-			//                 square is empty, the target square is empty or has an opposing piece, and the rook isn't pinned.
-		} else if sourcePiece == WHITE_QUEEN {
+			targetRank := rank
+			targetFile := file + 1
+			for (targetRank <= 8) && (targetFile <= 'H') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetFile += 1
+			}
+			targetRank = rank
+			targetFile = file - 1
+			for (targetRank >= 0) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetFile -= 1
+			}
+			targetRank = rank - 1
+			targetFile = file
+			for (targetRank >= 0) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank -= 1
+			}
+			targetRank = rank + 1
+			targetFile = file
+			for (targetRank <= 8) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank += 1
+			}
+		case BLACK_QUEEN:
 			// Cases if not in check:
 			// (1) MOVE:       Legal iff the target square is on either the same rank, the same file, or the same diagonal as the queen, every square between the
 			//                 the queen and the target square is empty, the target square is empty or has an opposing piece, and the queen isn't pinned.
-		} else if sourcePiece == BLACK_QUEEN {
-			// Cases if not in check:
-			// (1) MOVE:       Legal iff the target square is on either the same rank, the same file, or the same diagonal as the queen, every square between the
-			//                 the queen and the target square is empty, the target square is empty or has an opposing piece, and the queen isn't pinned.
-		} else if sourcePiece == WHITE_KING {
-			// Cases if not in check:
-			// (1) MOVE:       Legal iff the target square is directly adjacent to the king, the target square is either empty or has an opposing piece, and the 
-			//                 king wouldn't be under attack if it moved there.
-		} else if sourcePiece == WHITE_KING {
-			// Cases if not in check:
-			// (1) MOVE:       Legal iff the target square is directly adjacent to the king, the target square is either empty or has an opposing piece, and the 
-			//                 king wouldn't be under attack if it moved there.
-		} else {
-			return false, errors.New("Illegal entity in board.")
+			targetRank := rank + 1
+			targetFile := file + 1
+			for (targetRank <= 8) && (targetFile <= 'H') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank += 1
+				targetFile += 1
+			}
+			targetRank = rank - 1
+			targetFile = file + 1
+			for (targetRank >= 0) && (targetFile <= 'H') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank -= 1
+				targetFile += 1
+			}
+			targetRank = rank - 1
+			targetFile = file - 1
+			for (targetRank >= 0) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank -= 1
+				targetFile -= 1
+			}
+			targetRank = rank + 1
+			targetFile = file - 1
+			for (targetRank <= 8) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank += 1
+				targetFile -= 1
+			}
+			targetRank = rank
+			targetFile = file + 1
+			for (targetRank <= 8) && (targetFile <= 'H') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetFile += 1
+			}
+			targetRank = rank
+			targetFile = file - 1
+			for (targetRank >= 0) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetFile -= 1
+			}
+			targetRank = rank - 1
+			targetFile = file
+			for (targetRank >= 0) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank -= 1
+			}
+			targetRank = rank + 1
+			targetFile = file
+			for (targetRank <= 8) && (targetFile >= 'A') {
+				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+				}
+				if b[targetFile][targetRank] != EMPTY_SQUARE {
+					break
+				}
+				targetRank += 1
+			}
+		case BLACK_KING:
+			targetRank := rank + 1
+			targetFile := file + 1
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
+			}
+			targetRank = rank + 1
+			targetFile = file
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
+			}
+			targetRank = rank + 1 
+			targetFile = file - 1
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
+			}
+			targetRank = rank
+			targetFile = file + 1
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
+			}
+			targetRank = rank
+			targetFile = file - 1
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
+			}
+			targetRank = rank - 1
+			targetFile = file + 1
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
+			}
+			targetRank = rank - 1
+			targetFile = file
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
+			}
+			targetRank = rank - 1 
+			targetFile = file - 1
+			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
+			}
 		}
 	}
-    return false, errors.New("How tf did you even get here?")
+	if !fromCheck {
+		newMoves := make(MoveSequence, 0)
+		for i := 0; i < len(moves); i++ {
+			if !checkForCheck(b, append(h, moves[i]), p) {
+				newMoves = append(newMoves, moves[i])
+			}
+		}
+		return newMoves
+	}
+	return moves
 }
 
 func makeMove(b Board, h MoveSequence, m Move) error {

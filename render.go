@@ -11,13 +11,16 @@ const screenHeight = 8 * SQUARE_WIDTH
 
 
 
-func renderBoard(b Board, selectedPiece []int,  w *sdl.Window, r *sdl.Renderer) error {
+func renderBoard(b Board, selectedPiece []int, highlightedSquares MoveSequence, w *sdl.Window, r *sdl.Renderer) error {
 	for i, file := range FILES {
 		for j, rank := range RANKS {
 			if (i + j) % 2 == 0 {
 				r.SetDrawColor(248, 231, 187, 255)
 			} else {
 				r.SetDrawColor(0, 68, 116, 255)
+			}
+			if (selectedPiece != nil) && (file == selectedPiece[0]) && (rank == selectedPiece[1]) {
+				r.SetDrawColor(19, 196, 163, 255)
 			}
 			r.FillRect(&sdl.Rect{int32(SQUARE_WIDTH * i), int32(SQUARE_WIDTH * j), int32(SQUARE_WIDTH), int32(SQUARE_WIDTH)})
 

@@ -43,15 +43,15 @@ func run() error {
 	h := make([]Move, 0)
 	count := 0
 
-	selectedPiece := []int{0, 0}
+	var selectedPiece []int = nil
 
 	for {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch event.(type) {
+			switch t := event.(type) {
 			case *sdl.QuitEvent:
 				return nil
 			case *sdl.KeyboardEvent:
-				if event.GetType() == sdl.KEYUP {
+				if t.GetType() == sdl.KEYUP {
 					if count >= len(moves) {
 						return nil
 					}
@@ -60,16 +60,17 @@ func run() error {
 					fmt.Println(checkForCheck(b, h, 1))
 				}
 			case *sdl.MouseButtonEvent:
-				if event.State == sdl.PRESSED {
-					if selectedPiece == []int{0, 0} {
-						selectedPiece = []int{event.(type).Y / SQUARE_WIDTH + 1, event.(type).X / SQUARE_WIDTH + 65}
+				if t.State == sdl.PRESSED {
+					selectedPiece = []int{int(t.X / SQUARE_WIDTH) + 65, int(t.Y / SQUARE_WIDTH) + 1}
+					fmt.Println(string(rune(selectedPiece[0])), selectedPiece[1])
+					if b[selectedPiece[0]][selectedPiece[1]] == EMPTY_SQUARE {
+						selectedPiece = nil
 					}
-					fmt.Println(selectedPiece)
 				}
 			}
 
 		}
-		err = renderBoard(b, selectedPiece, window, renderer)
+		err = renderBoard(b, selectedPiece, nil, window, renderer)
 		if err != nil {
 			fmt.Println("Board is broken:", err)
 			return err
