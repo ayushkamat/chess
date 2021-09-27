@@ -60,6 +60,25 @@ func (m Move) String() string {
 	return fmt.Sprintf("%s%c%v", PIECE_NAMES[m.P], rune(m.DF), m.DR)
 }
 
+func (b Board) copy() Board {
+	newBoard := Board{}
+	for _, file := range FILES {
+		newBoard[file] = make(map[int]Piece)
+		for _, rank := range RANKS {
+			newBoard[file][rank] = b[file][rank]
+		}
+	}
+	return newBoard
+}
+
+func (h MoveSequence) copy() MoveSequence {
+	newH := MoveSequence{}
+	for _, move := range h {
+		newH = append(newH, move)
+	}
+	return newH
+}
+
 func initializeBoard() (Board, error) {
 	board := Board{}
 	for _, file := range FILES {
@@ -166,7 +185,7 @@ func checkForCheck(b Board, h MoveSequence, p int) bool {
 	for _, file := range FILES {
 		for _, rank := range RANKS {
 			if opposing(b[file][rank]) {
-				moves := generateLegalMoves(b, h, file, rank, p, true)
+				moves := generateLegalMoves(b, h, file, rank, 1 - p, true)
 				for _, move := range moves {
 					if (move.DR == kingRank) && (move.DF == kingFile) {
 						return true
@@ -596,7 +615,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile := file + 1
 			for (targetRank <= 8) && (targetFile <= 'H') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_BISHOP})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -608,7 +627,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file + 1
 			for (targetRank >= 0) && (targetFile <= 'H') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_BISHOP})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -620,7 +639,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file - 1
 			for (targetRank >= 0) && (targetFile >= 'A') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_BISHOP})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -632,7 +651,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file - 1
 			for (targetRank <= 8) && (targetFile >= 'A') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_BISHOP})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_BISHOP})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -648,7 +667,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile := file + 1
 			for (targetRank <= 8) && (targetFile <= 'H') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_ROOK})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -659,7 +678,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file - 1
 			for (targetRank >= 0) && (targetFile >= 'A') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_ROOK})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -670,7 +689,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file
 			for (targetRank >= 0) && (targetFile >= 'A') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_ROOK})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -681,7 +700,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file
 			for (targetRank <= 8) && (targetFile >= 'A') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_ROOK})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -696,7 +715,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile := file + 1
 			for (targetRank <= 8) && (targetFile <= 'H') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_QUEEN})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -708,7 +727,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file + 1
 			for (targetRank >= 0) && (targetFile <= 'H') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_QUEEN})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -720,7 +739,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file - 1
 			for (targetRank >= 0) && (targetFile >= 'A') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_QUEEN})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -732,7 +751,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file - 1
 			for (targetRank <= 8) && (targetFile >= 'A') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_QUEEN})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -744,7 +763,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file + 1
 			for (targetRank <= 8) && (targetFile <= 'H') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_QUEEN})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -755,7 +774,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file - 1
 			for (targetRank >= 0) && (targetFile >= 'A') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_QUEEN})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -766,7 +785,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file
 			for (targetRank >= 0) && (targetFile >= 'A') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_QUEEN})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -777,7 +796,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file
 			for (targetRank <= 8) && (targetFile >= 'A') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isWhite(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_QUEEN})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -829,10 +848,14 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 	}
 	if !fromCheck {
 		newMoves := make(MoveSequence, 0)
+		tempB := b.copy()
 		for i := 0; i < len(moves); i++ {
-			if !checkForCheck(b, append(h, moves[i]), p) {
+			tempH := h.copy()
+			makeMove(tempB, tempH, moves[i])
+			if !checkForCheck(tempB, tempH, p) {
 				newMoves = append(newMoves, moves[i])
 			}
+			undoMove(b, tempB, moves[i])
 		}
 		return newMoves
 	}
@@ -846,5 +869,11 @@ func makeMove(b Board, h MoveSequence, m Move) error {
 	b[m.DF][m.DR] = m.P
 	b[m.SF][m.SR] = EMPTY_SQUARE
 	h = append(h, m)
+	return nil
+}
+
+func undoMove(b Board, tempB Board, m Move) error {
+	tempB[m.DF][m.DR] = b[m.DF][m.DR]
+	tempB[m.SF][m.SR] = b[m.SF][m.SR]
 	return nil
 }

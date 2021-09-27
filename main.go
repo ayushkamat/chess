@@ -44,6 +44,15 @@ func run() error {
 	count := 0
 
 	var selectedPiece []int = nil
+	var tempPiece []int = nil
+	var legalMoves MoveSequence = nil
+
+	mousePressed := false
+	moveMade := false
+
+	player := 0
+	isPlayer := isWhite
+	isOpponent := isBlack
 
 	for {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
@@ -60,17 +69,44 @@ func run() error {
 					fmt.Println(checkForCheck(b, h, 1))
 				}
 			case *sdl.MouseButtonEvent:
-				if t.State == sdl.PRESSED {
-					selectedPiece = []int{int(t.X / SQUARE_WIDTH) + 65, int(t.Y / SQUARE_WIDTH) + 1}
-					fmt.Println(string(rune(selectedPiece[0])), selectedPiece[1])
-					if b[selectedPiece[0]][selectedPiece[1]] == EMPTY_SQUARE {
+				if t.State == sdl.PRESSED && !mousePressed {
+					tempPiece = []int{int(t.X / SQUARE_WIDTH) + 65, int(t.Y / SQUARE_WIDTH) + 1}
+					if selectedPiece != nil {
+						for _, move := range legalMoves {
+							if (tempPiece[0] == move.DF) && (tempPiece[1] == move.DR) {
+								makeMove(b, h, move)
+								moveMade = true
+								player = 1 - player
+								isPlayer, isOpponent = isOpponent, isPlayer
+								selectedPiece = nil
+								legalMoves = nil
+								break
+							}
+						}
 						selectedPiece = nil
+						legalMoves = nil
 					}
+					if !moveMade {
+						if b[tempPiece[0]][tempPiece[1]] == EMPTY_SQUARE || isOpponent(b[tempPiece[0]][tempPiece[1]]){
+							selectedPiece = nil
+							legalMoves = nil
+						} else {
+							selectedPiece = tempPiece
+							legalMoves = generateLegalMoves(b, h, selectedPiece[0], selectedPiece[1], player, false)
+						}
+						mousePressed = true
+					}
+					moveMade = false
+				}
+				if t.State == sdl.RELEASED {
+					mousePressed = false
 				}
 			}
 
 		}
-		err = renderBoard(b, selectedPiece, nil, window, renderer)
+
+
+		err = renderBoard(b, selectedPiece, legalMoves, window, renderer)
 		if err != nil {
 			fmt.Println("Board is broken:", err)
 			return err

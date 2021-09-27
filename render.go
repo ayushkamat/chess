@@ -5,6 +5,7 @@ import (
 )
 
 const SQUARE_WIDTH = 100
+const HIGHLIGHT = SQUARE_WIDTH / 3
 
 const screenWidth = 8 * SQUARE_WIDTH
 const screenHeight = 8 * SQUARE_WIDTH
@@ -39,6 +40,14 @@ func renderBoard(b Board, selectedPiece []int, highlightedSquares MoveSequence, 
 				defer pieceTex.Destroy()
 				r.Copy(pieceTex, &sdl.Rect{0, 0, 141, 141}, &sdl.Rect{int32(SQUARE_WIDTH * i), int32(SQUARE_WIDTH * j), int32(SQUARE_WIDTH), int32(SQUARE_WIDTH)})
 			}
+		}
+	}
+	if highlightedSquares != nil {
+		r.SetDrawColor(119, 136, 153, 255)
+		for _, move := range highlightedSquares {
+			i := move.DF - 'A'
+			j := move.DR - 1
+			r.FillRect(&sdl.Rect{int32(SQUARE_WIDTH * i + HIGHLIGHT), int32(SQUARE_WIDTH * j + HIGHLIGHT), int32(HIGHLIGHT), int32(HIGHLIGHT)})
 		}
 	}
 	return nil
