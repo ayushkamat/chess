@@ -164,11 +164,31 @@ func isBlack(p Piece) bool {
 	return p > 128
 }
 
+func threatens(b Board, h MoveSequence, targetFile int, targetRank int, p int, fromCheck bool) bool {
+	// For a given position, determine if a particular square is being covered by one of p's pieces
+	allied := isBlack
+	if p == 0 {
+		allied = isWhite
+	}
+	for _, file := range FILES {
+		for _, rank := range RANKS {
+			if allied(b[file][rank]) {
+				moves := generateLegalMoves(b, h, file, rank, p, fromCheck)
+				for _, move := range moves {
+					if (move.DR == targetRank) && (move.DF == targetFile) {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
 func checkForCheck(b Board, h MoveSequence, p int) bool {
-	opposing := isWhite
+	// check if a player is in check by another player
 	king := BLACK_KING
 	if p == 0 {
-		opposing = isBlack
 		king = WHITE_KING
 	}
 	kingRank := 0
@@ -182,19 +202,7 @@ func checkForCheck(b Board, h MoveSequence, p int) bool {
 		}
 	}
 
-	for _, file := range FILES {
-		for _, rank := range RANKS {
-			if opposing(b[file][rank]) {
-				moves := generateLegalMoves(b, h, file, rank, 1 - p, true)
-				for _, move := range moves {
-					if (move.DR == kingRank) && (move.DF == kingFile) {
-						return true
-					}
-				}
-			}
-		}
-	}
-	return false
+	return threatens(b, h, kingFile, kingRank, 1 - p, true)
 }
 
 func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, fromCheck bool) MoveSequence {
@@ -344,7 +352,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile := file + 1
 			for (targetRank <= 8) && (targetFile <= 'H') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_ROOK})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -355,7 +363,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file - 1
 			for (targetRank >= 0) && (targetFile >= 'A') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_ROOK})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -366,7 +374,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file
 			for (targetRank >= 0) && (targetFile >= 'A') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_ROOK})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -377,7 +385,7 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 			targetFile = file
 			for (targetRank <= 8) && (targetFile >= 'A') {
 				if (b[targetFile][targetRank] == EMPTY_SQUARE) || (isBlack(b[targetFile][targetRank])) {
-					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_QUEEN})
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_ROOK})
 				}
 				if b[targetFile][targetRank] != EMPTY_SQUARE {
 					break
@@ -483,43 +491,67 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 		case WHITE_KING:
 			targetRank := rank + 1
 			targetFile := file + 1
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
 			}
 			targetRank = rank + 1
 			targetFile = file
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
 			}
 			targetRank = rank + 1 
 			targetFile = file - 1
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
 			}
 			targetRank = rank
 			targetFile = file + 1
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
 			}
 			targetRank = rank
 			targetFile = file - 1
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
 			}
 			targetRank = rank - 1
 			targetFile = file + 1
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
 			}
 			targetRank = rank - 1
 			targetFile = file
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
 			}
 			targetRank = rank - 1 
 			targetFile = file - 1
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isBlack(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: WHITE_KING})
+			}
+
+			// CASTLING	
+			if !fromCheck {
+				kingside := !checkForCheck(b, h, p) && (b['H'][1] == WHITE_ROOK)
+				queenside := !checkForCheck(b, h, p) && (b['A'][1] == WHITE_ROOK) && (b['B'][1] == EMPTY_SQUARE)
+				if len(h) > 0 {
+					for _, move := range h {
+						kingside = kingside && (move.P != WHITE_KING) && !((move.P == WHITE_ROOK) && (move.SF == 'H') && (move.SR == 1))
+						queenside = queenside && (move.P != WHITE_KING) && !((move.P == WHITE_ROOK) && (move.SF == 'A') && (move.SR == 1))
+					}
+				}
+				for _, f := range []int{'F', 'G'} {
+					kingside = kingside && !threatens(b, h, f, 1, 1 - p, true) && (b[f][1] == EMPTY_SQUARE)
+				}
+				for _, f := range []int{'C', 'D'} {
+					queenside = queenside && !threatens(b, h, f, 1, 1 - p, true) && (b[f][1] == EMPTY_SQUARE)
+				}
+				if kingside {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: 'G', DR: 1, P: WHITE_KING})
+				}
+				if queenside {
+					moves = append(moves, Move{PL: 0, SF: file, SR: rank, DF: 'C', DR: 1, P: WHITE_KING})
+				}
 			}
 		}
 	} else {
@@ -562,8 +594,8 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file + 1, DR: rank - 1, P: BLACK_PAWN})
 				}
 			}
-			if (rank - 1 >= 1) && (file - 1 >= 'A') && (isWhite(b[file - 1][rank + 1])) {
-				if rank == 7 {
+			if (rank - 1 >= 1) && (file - 1 >= 'A') && (isWhite(b[file - 1][rank - 1])) {
+				if rank == 2 {
 					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 1, P: BLACK_KNIGHT})
 					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 1, P: BLACK_BISHOP})
 					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: file - 1, DR: rank - 1, P: BLACK_ROOK})
@@ -806,43 +838,67 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 		case BLACK_KING:
 			targetRank := rank + 1
 			targetFile := file + 1
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
 			}
 			targetRank = rank + 1
 			targetFile = file
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
 			}
 			targetRank = rank + 1 
 			targetFile = file - 1
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
 			}
 			targetRank = rank
 			targetFile = file + 1
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
 			}
 			targetRank = rank
 			targetFile = file - 1
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
 			}
 			targetRank = rank - 1
 			targetFile = file + 1
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
 			}
 			targetRank = rank - 1
 			targetFile = file
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
 			}
 			targetRank = rank - 1 
 			targetFile = file - 1
-			if (targetRank >= 0) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
+			if (targetRank >= 1) && (targetRank <= 8) && (targetFile >= 'A') && (targetFile <= 'H') && ((b[targetFile][targetRank] == EMPTY_SQUARE) || isWhite(b[targetFile][targetRank])) {
 				moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: targetFile, DR: targetRank, P: BLACK_KING})
+			}
+
+			// CASTLING
+			if !fromCheck {
+				kingside := !checkForCheck(b, h, p) && (b['H'][8] == BLACK_ROOK)
+				queenside := !checkForCheck(b, h, p) && (b['A'][8] == BLACK_ROOK) && (b['B'][8] == EMPTY_SQUARE)
+				if len(h) > 0 {
+					for _, move := range h {
+						kingside = kingside && (move.P != BLACK_KING) && !((move.P == BLACK_ROOK) && (move.SF == 'H') && (move.SR == 8))
+						queenside = queenside && (move.P != BLACK_KING) && !((move.P == BLACK_ROOK) && (move.SF == 'A') && (move.SR == 8))
+					}
+				}
+				for _, f := range []int{'F', 'G'} {
+					kingside = kingside && !threatens(b, h, f, 8, 1 - p, true) && (b[f][8] == EMPTY_SQUARE)
+				}
+				for _, f := range []int{'C', 'D'} {
+					queenside = queenside && !threatens(b, h, f, 8, 1 - p, true) && (b[f][8] == EMPTY_SQUARE)
+				}
+				if kingside {
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: 'G', DR: 8, P: BLACK_KING})
+				}
+				if queenside {
+					moves = append(moves, Move{PL: 1, SF: file, SR: rank, DF: 'C', DR: 8, P: BLACK_KING})
+				}
 			}
 		}
 	}
@@ -862,12 +918,53 @@ func generateLegalMoves(b Board, h MoveSequence, file int, rank int, p int, from
 	return moves
 }
 
+func checkNoLegalMoves(b Board, h MoveSequence, p int) bool {
+	stalemate := true
+	for _, file := range FILES {
+		for _, rank := range RANKS {
+			temp := generateLegalMoves(b, h, file, rank, p, false)
+			stalemate = stalemate && (len(temp) == 0)
+		}
+	}
+	return stalemate
+}
+
+func gameOver(b Board, h MoveSequence, p int) bool {
+	return checkForCheck(b, h, p) && checkNoLegalMoves(b, h, p)
+}
+
 func makeMove(b Board, h MoveSequence, m Move) error {
 	// if legal, err := CheckLegalMove(b, h, m); !legal || (err != nil) {
 	// 	return errors.New("Illegal Move.")
 	// }
-	b[m.DF][m.DR] = m.P
-	b[m.SF][m.SR] = EMPTY_SQUARE
+	if (m.P == WHITE_KING) && (m.SF == 'E') && (m.SR == 1) && (m.DF == 'G') {
+		// white kingside castling
+		b['E'][1] = EMPTY_SQUARE
+		b['H'][1] = EMPTY_SQUARE
+		b['F'][1] = WHITE_ROOK
+		b['G'][1] = WHITE_KING
+	} else if (m.P == BLACK_KING) && (m.SF == 'E') && (m.SR == 8) && (m.DF == 'G') {
+		// black kingside castling
+		b['E'][8] = EMPTY_SQUARE
+		b['H'][8] = EMPTY_SQUARE
+		b['F'][8] = BLACK_ROOK
+		b['G'][8] = BLACK_KING
+	} else if (m.P == WHITE_KING) && (m.SF == 'E') && (m.SR == 1) && (m.DF == 'C') {
+		// white queenside castling
+		b['E'][1] = EMPTY_SQUARE
+		b['A'][1] = EMPTY_SQUARE
+		b['D'][1] = WHITE_ROOK
+		b['C'][1] = WHITE_KING
+	} else if (m.P == BLACK_KING) && (m.SF == 'E') && (m.SR == 8) && (m.DF == 'C') {
+		// black queenside castling
+		b['E'][8] = EMPTY_SQUARE
+		b['A'][8] = EMPTY_SQUARE
+		b['D'][8] = BLACK_ROOK
+		b['C'][8] = BLACK_KING
+	} else {
+		b[m.DF][m.DR] = m.P
+		b[m.SF][m.SR] = EMPTY_SQUARE
+	}
 	h = append(h, m)
 	return nil
 }

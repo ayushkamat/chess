@@ -39,9 +39,7 @@ func run() error {
 		return err
 	}
 
-	moves := SCHOLAR_MATE
 	h := make([]Move, 0)
-	count := 0
 
 	var selectedPiece []int = nil
 	var tempPiece []int = nil
@@ -53,21 +51,13 @@ func run() error {
 	player := 0
 	isPlayer := isWhite
 	isOpponent := isBlack
+	ended := false
 
 	for {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch t := event.(type) {
 			case *sdl.QuitEvent:
 				return nil
-			case *sdl.KeyboardEvent:
-				if t.GetType() == sdl.KEYUP {
-					if count >= len(moves) {
-						return nil
-					}
-					makeMove(b, h, moves[count])
-					count += 1
-					fmt.Println(checkForCheck(b, h, 1))
-				}
 			case *sdl.MouseButtonEvent:
 				if t.State == sdl.PRESSED && !mousePressed {
 					tempPiece = []int{int(t.X / SQUARE_WIDTH) + 65, int(t.Y / SQUARE_WIDTH) + 1}
@@ -78,8 +68,7 @@ func run() error {
 								moveMade = true
 								player = 1 - player
 								isPlayer, isOpponent = isOpponent, isPlayer
-								selectedPiece = nil
-								legalMoves = nil
+								ended = gameOver(b, h, player)
 								break
 							}
 						}
@@ -103,6 +92,11 @@ func run() error {
 				}
 			}
 
+		}
+
+		if ended {
+			fmt.Println("Game Over! Player ", 1 - player, "wins!")
+			return nil
 		}
 
 
